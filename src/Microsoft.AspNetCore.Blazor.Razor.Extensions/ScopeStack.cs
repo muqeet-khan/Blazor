@@ -15,8 +15,6 @@ namespace Microsoft.AspNetCore.Blazor.Razor
     /// </summary>
     internal class ScopeStack
     {
-        private const string _renderFragmentTypeName = "Microsoft.AspNetCore.Blazor.RenderFragment";
-
         private readonly Stack<ScopeEntry> _stack = new Stack<ScopeEntry>();
         private int _builderVarNumber = 1;
 
@@ -31,15 +29,15 @@ namespace Microsoft.AspNetCore.Blazor.Razor
         {
             if (_stack.Count == 0)
             {
-                throw new RazorCompilerException(
-                    $"Unexpected closing tag '{tagName}' with no matching start tag.", source);
+                var diagnostic = BlazorDiagnosticFactory.Create_UnexpectedClosingTag(source ?? SourceSpan.Undefined, tagName);
+                throw new RazorCompilerException(diagnostic);
             }
 
             var currentScope = _stack.Pop();
             if (!tagName.Equals(currentScope.TagName, StringComparison.Ordinal))
             {
-                throw new RazorCompilerException(
-                    $"Mismatching closing tag. Found '{tagName}' but expected '{currentScope.TagName}'.", source);
+                var diagnostic = BlazorDiagnosticFactory.Create_MismatchedClosingTag(source, currentScope.TagName, tagName);
+                throw new RazorCompilerException(diagnostic);
             }
 
             // Note: there's no unit test to cover the following, because there's no known way of
@@ -47,8 +45,10 @@ namespace Microsoft.AspNetCore.Blazor.Razor
             // just in case one day it turns out there is some way of causing this error.
             if (isComponent != currentScope.IsComponent)
             {
-                throw new RazorCompilerException(
-                    $"Mismatching closing tag. Found '{tagName}' of type '{(isComponent ? "component" : "element")}' but expected type '{(currentScope.IsComponent ? "component" : "element")}'.", source);
+                var kind = isComponent ? "component" : "element";
+                var expectedKind = currentScope.IsComponent ? "component" : "element";
+                var diagnostic = BlazorDiagnosticFactory.Create_MismatchedClosingTagKind(source, tagName, kind, expectedKind);
+                throw new RazorCompilerException(diagnostic);
             }
 
             // When closing the scope for a component with children, it's time to close the lambda
@@ -71,10 +71,10 @@ namespace Microsoft.AspNetCore.Blazor.Razor
                 {
                     // When we're about to insert the first child into a component,
                     // it's time to open a new lambda
-                    var blazorNodeWriter = (BlazorIntermediateNodeWriter)context.NodeWriter;
-                    blazorNodeWriter.BeginWriteAttribute(context.CodeWriter, RenderTreeBuilder.ChildContent);
+                    var blazorNodeWriter = (BlazorNodeWriter)context.NodeWriter;
+                    blazorNodeWriter.BeginWriteAttribute(context.CodeWriter, BlazorApi.RenderTreeBuilder.ChildContent);
                     OffsetBuilderVarNumber(1);
-                    context.CodeWriter.Write($"({_renderFragmentTypeName})(");
+                    context.CodeWriter.Write($"({BlazorApi.RenderFragment.FullTypeName})(");
                     currentScope.LambdaScope = context.CodeWriter.BuildLambda(BuilderVarName);
                 }
 
