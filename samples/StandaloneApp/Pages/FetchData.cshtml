@@ -1,6 +1,6 @@
 ﻿@inject HttpClient Http
 
-<h1>Weather forecast</h1>
+<h1>Office Information</h1>
 
 <p>This component demonstrates fetching data from the server.</p>
 
@@ -33,13 +33,25 @@ else
     </table>
 }
 
+@if (office == null)
+{
+    <p><em>Loading Office...</em></p>
+}
+else
+{
+        @office.officeName @:is located at @office.addressLine1 @office.addressLine2
+}
+
 @functions {
     WeatherForecast[] forecasts;
+    GeraciOffice office;
 
     protected override async Task OnInitAsync()
     {
         var json = await Http.GetStringAsync("/sample-data/weather.json");
         forecasts = JsonUtil.Deserialize<WeatherForecast[]>(json);
+        var officejson = await Http.GetStringAsync("https://api.geracilaw.com/api/office/geracioffice/sou");
+        office = JsonUtil.Deserialize<GeraciOffice>(officejson);
     }
 
     class WeatherForecast
@@ -48,5 +60,28 @@ else
         public int TemperatureC { get; set; }
         public int TemperatureF { get; set; }
         public string Summary { get; set; }
+    }
+
+    class GeraciOffice
+    {
+
+        public string officeCode { get; set; }
+        public string officeName { get; set; }
+        public float longitude { get; set; }
+        public float lattitude { get; set; }
+        public string googlePlus { get; set; }
+        public string yelp { get; set; }
+        public string bbb { get; set; }
+        public string yahoo { get; set; }
+        public string bing { get; set; }
+        public string url { get; set; }
+        public string addressLine1 { get; set; }
+        public string addressLine2 { get; set; }
+        public string city { get; set; }
+        public string state { get; set; }
+        public string zipCode { get; set; }
+        public object county { get; set; }
+
+
     }
 }
